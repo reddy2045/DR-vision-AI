@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>PHC Tele-Ophthalmology</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet"/>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,600;14..32,700&display=swap" rel="stylesheet"/>
+    <style>
+        :root {
+            --shell-navy: #081426;
+            --shell-navy-2: #0d1d34;
+            --shell-border: rgba(164, 190, 220, 0.14);
+            --shell-text: #e8f0fa;
+            --shell-muted: #8ea1b8;
+            --shell-blue: #4d8dff;
+            --shell-cyan: #49c8d8;
+        }
+
+        * { font-family: 'Inter', sans-serif; }
+        body { background: #ffffff; color: #10213a; }
+        .app-shell { min-height: 100vh; }
+        .app-sidebar {
+            position: fixed;
+            inset: 0 auto 0 0;
+            z-index: 1040;
+            width: 248px;
+            padding: 24px 16px 18px;
+            display: flex;
+            flex-direction: column;
+            background: #071121;
+            border-right: 1px solid var(--shell-border);
+        }
+        .brand-lockup { display: flex; gap: 11px; align-items: center; color: var(--shell-text); text-decoration: none; margin: 0 10px 34px; }
+        .brand-mark { width: 36px; height: 36px; display: grid; place-items: center; border-radius: 10px; color: #fff; background: linear-gradient(145deg, var(--shell-blue), #2c5ec2); box-shadow: 0 8px 22px rgba(46, 106, 220, .28); }
+        .brand-name { display: block; font-size: .95rem; font-weight: 700; letter-spacing: .01em; }
+        .brand-subtitle { display: block; color: var(--shell-muted); font-size: .63rem; margin-top: 2px; }
+        .nav-label { margin: 0 12px 10px; color: #627791; font-size: .62rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
+        .app-nav { display: grid; gap: 5px; }
+        .app-nav a { min-height: 42px; display: flex; align-items: center; gap: 12px; padding: 0 12px; border: 1px solid transparent; border-radius: 9px; color: var(--shell-muted); font-size: .82rem; text-decoration: none; transition: .2s ease; }
+        .app-nav a:hover, .app-nav a.active { color: #fff; background: rgba(77, 141, 255, .14); border-color: rgba(77, 141, 255, .2); }
+        .app-nav a.active { box-shadow: inset 3px 0 0 var(--shell-blue); }
+        .app-nav svg { width: 17px; height: 17px; }
+        .sidebar-spacer { flex: 1; }
+        .support-link { color: var(--shell-muted); font-size: .78rem; padding: 12px; text-decoration: none; }
+        .profile-card { display: flex; align-items: center; gap: 10px; padding: 12px 10px 0; border-top: 1px solid var(--shell-border); }
+        .profile-avatar { width: 32px; height: 32px; display: grid; place-items: center; flex: 0 0 auto; border-radius: 50%; color: #fff; background: #24466c; font-size: .75rem; font-weight: 700; }
+        .profile-name { color: var(--shell-text); font-size: .78rem; font-weight: 600; }
+        .profile-role { color: var(--shell-muted); display: block; font-size: .65rem; margin-top: 2px; }
+        .app-topbar { position: fixed; inset: 0 0 auto 248px; z-index: 1030; height: 76px; display: flex; align-items: center; justify-content: space-between; padding: 0 34px; background: rgba(8, 20, 38, .92); border-bottom: 1px solid var(--shell-border); backdrop-filter: blur(18px); }
+        .breadcrumb-line { color: var(--shell-muted); font-size: .73rem; }
+        .page-title { display: block; color: var(--shell-text); font-size: 1.05rem; font-weight: 700; margin-top: 3px; }
+        .topbar-actions { display: flex; align-items: center; gap: 22px; }
+        .status-indicator { color: #a9bdcf; font-size: .75rem; }
+        .status-dot { width: 8px; height: 8px; border-radius: 50%; background: #37c989; display: inline-block; box-shadow: 0 0 0 4px rgba(55, 201, 137, .12); animation: pulse 2s infinite; }
+        .topbar-icon { color: var(--shell-muted); }
+        .topbar-user { color: var(--shell-text); text-decoration: none; font-size: .78rem; }
+        .topbar-user small { color: var(--shell-muted); }
+        .app-main { min-height: 100vh; margin: 0; padding: 110px 36px 40px 284px; }
+        .mobile-menu { display: none; }
+        .navbar { display: none; }
+        .toast-container { z-index: 1060; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .4; } }
+        @media (max-width: 991.98px) {
+            .app-sidebar { transform: translateX(-100%); transition: transform .25s ease; box-shadow: 18px 0 50px rgba(0,0,0,.25); }
+            .app-sidebar.is-open { transform: translateX(0); }
+            .app-topbar { inset: 0; padding: 0 20px; }
+            .app-main { padding: 102px 20px 32px; }
+            .mobile-menu { display: inline-flex; align-items: center; justify-content: center; width: 38px; height: 38px; margin-right: 10px; border: 1px solid var(--shell-border); border-radius: 9px; color: var(--shell-text); background: transparent; }
+            .breadcrumb-wrap { display: flex; align-items: center; }
+            .topbar-actions { gap: 12px; }
+            .topbar-user span, .topbar-user small { display: none; }
+        }
+        @media (max-width: 575.98px) {
+            .app-main { padding: 94px 14px 24px; }
+            .app-topbar { height: 68px; padding: 0 14px; }
+            .status-indicator span:last-child, .topbar-icon { display: none; }
+            .page-title { font-size: .95rem; }
+        }
+    </style>
+</head>
+<body>
+    <div class="app-shell">
+        <aside class="app-sidebar" id="appSidebar" aria-label="Primary navigation">
+            <a class="brand-lockup" href="{% url 'dashboard' %}">
+                <span class="brand-mark"><i data-lucide="scan-eye"></i></span>
+                <span><span class="brand-name">DR Vision AI</span><span class="brand-subtitle">PHC Screening Platform</span></span>
+            </a>
+            <div class="nav-label">Workspace</div>
+            <nav class="app-nav">
+                <a href="{% url 'dashboard' %}" class="active"><i data-lucide="layout-dashboard"></i>Dashboard</a>
+                <a href="#newScreeningModal" data-bs-toggle="modal"><i data-lucide="scan-line"></i>Screen Patient</a>
+                <a href="#screeningLogTable"><i data-lucide="list-todo"></i>Screening Queue</a>
+                <a href="#screeningLogTable"><i data-lucide="users"></i>Patients</a>
+                <a href="#referralSlipModal" data-bs-toggle="modal"><i data-lucide="send"></i>Referrals</a>
+                <a href="#screeningLogTable"><i data-lucide="history"></i>Screening History</a>
+                <a href="#screeningLogTable"><i data-lucide="bar-chart-3"></i>Analytics</a>
+            </nav>
+            <div class="nav-label mt-4">System</div>
+            <nav class="app-nav">
+                <a href="#ai-panel"><i data-lucide="brain-circuit"></i>AI Model</a>
+                <a href="#"><i data-lucide="settings-2"></i>Settings</a>
+            </nav>
+            <div class="sidebar-spacer"></div>
+            <a class="support-link" href="mailto:support@drvision.ai"><i data-lucide="life-buoy" class="me-2" style="width:15px;"></i>Help &amp; Support</a>
+            <div class="profile-card">
+                <span class="profile-avatar">{{ request.user.first_name|first|upper }}{{ request.user.last_name|first|upper }}</span>
+                <span><span class="profile-name">{{ request.user.first_name }} {{ request.user.last_name }}</span><span class="profile-role">PHC healthcare worker</span></span>
+                <a class="ms-auto text-secondary" href="{% url 'logout' %}" title="Log out" aria-label="Log out"><i data-lucide="log-out" style="width:16px;"></i></a>
+            </div>
+        </aside>
+
+        <header class="app-topbar">
+            <div class="breadcrumb-wrap">
+                <button class="mobile-menu" type="button" aria-label="Open navigation" aria-controls="appSidebar" aria-expanded="false" onclick="toggleSidebar()"><i data-lucide="menu"></i></button>
+                <div><div class="breadcrumb-line">PHC Rampur <span class="mx-1">/</span> Workspace</div><span class="page-title">Screening dashboard</span></div>
+            </div>
+            <div class="topbar-actions">
+                <div class="status-indicator d-flex align-items-center gap-2"><span class="status-dot"></span><span>AI system online</span></div>
+                <i data-lucide="bell" class="topbar-icon" aria-label="Notifications"></i>
+                <div class="dropdown">
+                    <a class="topbar-user d-flex align-items-center gap-2 dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-label="Open user menu">
+                        <i data-lucide="user-circle"></i><span>{{ request.user.first_name }} {{ request.user.last_name }}</span>
+                        {% if request.user.phcworker %}<small>{{ request.user.phcworker.phc_id }}</small>{% endif %}
+                    </a>
+                    <ul class="dropdown-menu dropdown-menu-end"><li><a class="dropdown-item" href="{% url 'logout' %}"><i data-lucide="log-out" class="me-2"></i>Log Out</a></li></ul>
+                </div>
+            </div>
+        </header>
+
+    <main class="app-main">
+        {% block content %}{% endblock %}
+    </main>
+    </div>
+    <div id="toastContainer" class="toast-container"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        function toggleSidebar() {
+            const sidebar = document.getElementById('appSidebar');
+            const toggle = document.querySelector('.mobile-menu');
+            if (!sidebar) return;
+            const isOpen = sidebar.classList.toggle('is-open');
+            if (toggle) toggle.setAttribute('aria-expanded', String(isOpen));
+        }
+        lucide.createIcons();
+    </script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>

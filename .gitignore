@@ -1,0 +1,60 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg
+*.egg-info/
+dist/
+build/
+*.whl
+
+# Django
+*.log
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+media/
+staticfiles/
+static_root/
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Environment variables
+.env
+.env.*
+*.env
+
+# IDE / editors
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# MATLAB model file (large binary, must not be committed)
+*.mat
+
+# Compiled MATLAB
+*.mex*
+*.p
+*.mlapp
+*.mlappinstall
+
+# Coverage
+.coverage
+htmlcov/
+.pytest_cache/
+
+# Migrations (keep migration files but not __pycache__)
+**/migrations/__pycache__/
+
+# Node
+node_modules/

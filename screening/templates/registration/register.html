@@ -1,0 +1,871 @@
+{% extends 'base_no_nav.html' %}
+
+{% block title %}Register | PHC Tele-Ophthalmology{% endblock %}
+
+{% block content %}
+<!-- =============================================================
+     SPLIT-SCREEN REGISTRATION – NO GAPS / COMPACT FORM
+     Left: Retina Circle Image (SVG)
+     Right: Registration Form (Zero gap, perfectly tight)
+     ============================================================= -->
+
+<style>
+    /* ============================================================
+       RESET & BASE (Light theme)
+       ============================================================ */
+    @import url('https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&display=swap');
+
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+    }
+
+    body {
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        background: #ffffff;
+        color: #1e293b;
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow-y: auto;
+        overflow-x: hidden;
+    }
+
+    /* ============================================================
+       SPLIT CONTAINER – Full viewport height
+       ============================================================ */
+    .split-container {
+        display: flex;
+        min-height: 100vh;
+        width: 100%;
+        background: #ffffff;
+        box-shadow: 0 0 60px rgba(0, 0, 0, 0.02);
+    }
+
+    /* ============================================================
+       LEFT PANEL – Retina Image / Professional Matter
+       ============================================================ */
+    .left-panel {
+        flex: 1.1;
+        background: linear-gradient(145deg, #f0fdf4 0%, #ecfdf5 20%, #eff6ff 70%, #e0f2fe 100%);
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        padding: 4rem 3rem 4rem 4rem;
+        position: relative;
+        overflow: hidden;
+        border: 1px solid #dbe5ef;
+        border-right: 0;
+        border-radius: 40px 0 0 40px;
+        box-shadow: inset -1px 0 0 rgba(37, 99, 235, 0.08);
+    }
+
+    .left-panel::before {
+        content: '';
+        position: absolute;
+        top: -20%;
+        right: -10%;
+        width: 80%;
+        height: 80%;
+        background: radial-gradient(circle, rgba(16, 185, 129, 0.06) 0%, transparent 70%);
+        border-radius: 50%;
+        pointer-events: none;
+    }
+
+    .left-panel::after {
+        content: '';
+        position: absolute;
+        bottom: -10%;
+        left: -10%;
+        width: 60%;
+        height: 60%;
+        background: radial-gradient(circle, rgba(37, 99, 235, 0.05) 0%, transparent 70%);
+        border-radius: 50%;
+        pointer-events: none;
+    }
+
+    .left-content {
+        max-width: 520px;
+        width: 100%;
+        position: relative;
+        z-index: 2;
+        animation: slideInLeft 0.7s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+    }
+
+    @keyframes slideInLeft {
+        from {
+            opacity: 0;
+            transform: translateX(-30px);
+        }
+        to {
+            opacity: 1;
+            transform: translateX(0);
+        }
+    }
+
+    /* --- Retina Circle Image --- */
+    .eye-illustration {
+        width: 150px;
+        height: 150px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 2rem;
+        box-shadow: 0 20px 60px -16px rgba(37, 99, 235, 0.25),
+                    0 0 0 2px rgba(255, 255, 255, 0.6) inset,
+                    0 0 0 4px rgba(37, 99, 235, 0.08);
+        transition: transform 0.4s ease, box-shadow 0.4s ease;
+        background: #f8fafc;
+        overflow: hidden;
+        position: relative;
+    }
+
+    .eye-illustration:hover {
+        transform: scale(1.03) rotate(-1deg);
+        box-shadow: 0 25px 70px -16px rgba(37, 99, 235, 0.35),
+                    0 0 0 2px rgba(255, 255, 255, 0.8) inset,
+                    0 0 0 6px rgba(37, 99, 235, 0.10);
+    }
+
+    .eye-illustration svg {
+        width: 100%;
+        height: 100%;
+        display: block;
+        padding: 4px;
+    }
+
+    /* --- Brand Matter --- */
+    .left-content .badge-top {
+        display: inline-block;
+        background: rgba(16, 185, 129, 0.12);
+        color: #059669;
+        font-weight: 600;
+        font-size: 0.7rem;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        padding: 0.25rem 0.9rem;
+        border-radius: 30px;
+        border: 1px solid rgba(16, 185, 129, 0.15);
+        margin-bottom: 1rem;
+    }
+
+    .left-content h1 {
+        font-size: 2.8rem;
+        font-weight: 800;
+        line-height: 1.1;
+        letter-spacing: -0.03em;
+        color: #0f172a;
+        padding: 0.9rem 0 0.9rem 1rem;
+        border-left: 3px solid #2563eb;
+        border-radius: 2px;
+        margin-bottom: 1rem;
+    }
+
+    .left-content h1 span {
+        background: linear-gradient(135deg, #2563eb, #059669);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+
+    .left-content .lead {
+        font-size: 1.1rem;
+        line-height: 1.7;
+        color: #475569;
+        margin-bottom: 2rem;
+        max-width: 90%;
+    }
+
+    /* --- Trust Signals --- */
+    .trust-stats {
+        display: flex;
+        gap: 2.5rem;
+        margin-top: 0.5rem;
+        border-top: 1px solid rgba(0, 0, 0, 0.04);
+        padding-top: 1.5rem;
+    }
+
+    .trust-stats .stat-item {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+    }
+
+    .trust-stats .stat-item .number {
+        font-size: 1.8rem;
+        font-weight: 700;
+        color: #0f172a;
+        letter-spacing: -0.02em;
+        line-height: 1.2;
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
+    }
+
+    .trust-stats .stat-item .number svg {
+        color: #2563eb;
+    }
+
+    .trust-stats .stat-item .label {
+        font-size: 0.75rem;
+        color: #64748b;
+        font-weight: 500;
+        margin-top: 0.15rem;
+    }
+
+    /* ============================================================
+       RIGHT PANEL – Registration Form (ZERO GAPS)
+       ============================================================ */
+    .right-panel {
+        flex: 1;
+        background: #ffffff;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        padding: 3rem 3.5rem 3rem 3rem;
+        animation: slideInRight 0.7s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+    }
+
+    @keyframes slideInRight {
+        from {
+            opacity: 0;
+            transform: translateX(30px);
+        }
+        to {
+            opacity: 1;
+            transform: translateX(0);
+        }
+    }
+
+    .right-inner {
+        max-width: 460px;
+        width: 100%;
+        margin: 0 auto;
+    }
+
+    /* --- Progress Indicator --- */
+    .registration-progress {
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+        margin-bottom: 0.8rem;
+        color: #94a3b8;
+        font-size: 0.65rem;
+        font-weight: 600;
+        letter-spacing: 0.03em;
+    }
+
+    .registration-progress .step {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.3rem;
+    }
+
+    .registration-progress .step-number {
+        display: grid;
+        place-items: center;
+        width: 22px;
+        height: 22px;
+        border-radius: 50%;
+        border: 1px solid #cbd5e1;
+        color: #64748b;
+        font-size: 0.6rem;
+        font-weight: 700;
+        background: #fff;
+    }
+
+    .registration-progress .step.active {
+        color: #1d4ed8;
+    }
+    .registration-progress .step.active .step-number {
+        background: #2563eb;
+        border-color: #2563eb;
+        color: #fff;
+    }
+    .registration-progress .connector {
+        width: 24px;
+        height: 1px;
+        background: #dbe3ec;
+    }
+
+    /* --- Form Header --- */
+    .form-header {
+        margin-bottom: 1.2rem;
+    }
+
+    .form-header h2 {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: #0f172a;
+        letter-spacing: -0.02em;
+        margin-bottom: 0.1rem;
+    }
+
+    .form-header p {
+        color: #64748b;
+        font-size: 0.85rem;
+        margin: 0;
+    }
+
+    /* --- Form Rows – NO GAPS --- */
+    .auth-form .form-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0;
+        margin: 0;
+        padding: 0;
+    }
+
+    .auth-form .form-group {
+        flex: 1 0 calc(50% - 0rem);
+        min-width: 160px;
+        display: flex;
+        flex-direction: column;
+        gap: 0.05rem;
+        margin: 0;
+        padding: 0.15rem 0.1rem;
+    }
+
+    .auth-form .form-group.full-width {
+        flex: 1 0 100%;
+        padding: 0.15rem 0.1rem;
+    }
+
+    .auth-form label {
+        font-weight: 600;
+        font-size: 0.75rem;
+        color: #1e293b;
+        letter-spacing: 0.02em;
+        margin: 0;
+        padding-left: 0.2rem;
+    }
+
+    .auth-form input,
+    .auth-form select,
+    .auth-form textarea {
+        width: 100%;
+        background: #f8fafc;
+        border: 1.5px solid #e2e8f0;
+        border-radius: 12px;
+        color: #0f172a;
+        padding: 0.6rem 0.9rem;
+        transition: all 0.2s ease;
+        font-size: 0.9rem;
+        font-family: 'Inter', sans-serif;
+        outline: none;
+        box-shadow: none;
+        margin: 0;
+    }
+
+    .auth-form input::placeholder {
+        color: #94a3b8;
+        font-weight: 400;
+        font-size: 0.85rem;
+    }
+
+    .auth-form input:focus {
+        background: #ffffff;
+        border-color: #2563eb;
+        box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.10);
+    }
+
+    /* Error states */
+    .auth-form .is-invalid {
+        border-color: #ef4444 !important;
+        background: #fef2f2 !important;
+        box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.08) !important;
+    }
+
+    .auth-form .invalid-feedback,
+    .auth-form .errorlist {
+        display: block;
+        color: #dc2626;
+        font-size: 0.7rem;
+        font-weight: 500;
+        margin-top: 0.1rem;
+        padding-left: 0.2rem;
+    }
+
+    .auth-form .errorlist.nonfield {
+        background: #fef2f2;
+        border: 1px solid #fca5a5;
+        border-radius: 10px;
+        padding: 0.4rem 0.8rem;
+        margin: 0.2rem 0 0.4rem 0;
+        font-size: 0.8rem;
+        color: #b91c1c;
+        list-style: none;
+        width: 100%;
+    }
+
+    .auth-form .errorlist.nonfield li {
+        list-style: none;
+    }
+
+    .auth-form .help-text {
+        color: #94a3b8;
+        font-size: 0.65rem;
+        margin-top: 0.05rem;
+        padding-left: 0.2rem;
+    }
+
+    /* --- Section Labels (Tighter margins) --- */
+    .form-section-label {
+        flex: 1 0 100%;
+        display: flex;
+        align-items: center;
+        gap: 0.35rem;
+        margin: 0.5rem 0 0.15rem 0;
+        color: #2563eb;
+        font-size: 0.6rem;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        padding: 0 0.1rem;
+    }
+
+    .form-section-label:first-child {
+        margin-top: 0;
+    }
+    .form-section-label::after {
+        content: '';
+        height: 1px;
+        flex: 1;
+        background: #e5ebf2;
+    }
+
+    /* --- Security Note --- */
+    .security-note {
+        display: flex;
+        align-items: flex-start;
+        gap: 0.5rem;
+        margin-top: 0.5rem;
+        padding: 0.5rem 0.7rem;
+        border: 1px solid #dbeafe;
+        border-radius: 10px;
+        background: #f5f9ff;
+        color: #526b86;
+        font-size: 0.68rem;
+        line-height: 1.5;
+    }
+
+    .security-note i {
+        flex: 0 0 auto;
+        color: #2563eb;
+        margin-top: 0.05rem;
+    }
+
+    /* --- Submit Button --- */
+    .btn-auth {
+        background: linear-gradient(135deg, #2563eb, #059669);
+        border: none;
+        color: #ffffff;
+        font-weight: 600;
+        font-size: 0.95rem;
+        padding: 0.8rem 1.5rem;
+        border-radius: 60px;
+        width: 100%;
+        transition: all 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        box-shadow: 0 12px 30px -8px rgba(37, 99, 235, 0.30);
+        letter-spacing: 0.02em;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        margin-top: 0.6rem;
+        cursor: pointer;
+        border: none;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .btn-auth::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.15), transparent);
+        transition: left 0.6s ease;
+    }
+
+    .btn-auth:hover {
+        transform: translateY(-2px) scale(1.01);
+        box-shadow: 0 18px 40px -8px rgba(37, 99, 235, 0.45);
+        color: #fff;
+    }
+
+    .btn-auth:hover::after {
+        left: 100%;
+    }
+
+    .btn-auth:active {
+        transform: scale(0.97);
+    }
+
+    /* --- Footer --- */
+    .auth-footer {
+        text-align: center;
+        margin-top: 1.2rem;
+        color: #64748b;
+        font-size: 0.85rem;
+    }
+
+    .auth-footer a {
+        color: #2563eb;
+        text-decoration: none;
+        font-weight: 600;
+        transition: color 0.2s ease;
+        border-bottom: 2px solid transparent;
+    }
+
+    .auth-footer a:hover {
+        color: #059669;
+        border-bottom-color: #059669;
+    }
+
+    /* ============================================================
+       RESPONSIVE – Stack on smaller screens
+       ============================================================ */
+    @media (max-width: 992px) {
+        body {
+            overflow-y: auto;
+            align-items: flex-start;
+            padding: 1.5rem;
+            background: #f1f5f9;
+        }
+
+        .split-container {
+            flex-direction: column;
+            min-height: auto;
+            border-radius: 32px;
+            overflow: hidden;
+            box-shadow: 0 30px 80px -20px rgba(0, 0, 0, 0.15);
+        }
+
+        .left-panel {
+            flex: unset;
+            padding: 2.5rem 2rem;
+            align-items: center;
+            text-align: center;
+            border-right: 1px solid #dbe5ef;
+            border-radius: 40px 40px 0 0;
+        }
+
+        .left-content {
+            max-width: 100%;
+        }
+
+        .left-content .lead {
+            max-width: 100%;
+        }
+
+        .trust-stats {
+            justify-content: center;
+        }
+
+        .right-panel {
+            padding: 2rem 1.5rem;
+        }
+
+        .right-inner {
+            max-width: 100%;
+        }
+
+        .auth-form .form-group {
+            flex: 1 0 100%;
+        }
+
+        .eye-illustration {
+            width: 110px;
+            height: 110px;
+            margin-bottom: 1.5rem;
+        }
+        .left-content h1 {
+            font-size: 2rem;
+        }
+    }
+
+    @media (max-width: 480px) {
+        .left-panel {
+            padding: 1.5rem 1rem;
+        }
+        .right-panel {
+            padding: 1.5rem 1rem;
+        }
+        .left-content h1 {
+            font-size: 1.6rem;
+            padding: 0.5rem 0 0.5rem 0.7rem;
+        }
+        .trust-stats {
+            gap: 1.2rem;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        .btn-auth {
+            font-size: 0.85rem;
+            padding: 0.65rem 1rem;
+        }
+    }
+</style>
+
+<!-- =============================================================
+     SPLIT CONTAINER
+     ============================================================= -->
+<div class="split-container">
+
+    <!-- ==========================================================
+    LEFT PANEL – Retina Image + Brand Story
+    ========================================================== -->
+    <div class="left-panel">
+        <div class="left-content">
+
+            <!-- Retina Circle Image (SVG) -->
+            <div class="eye-illustration" aria-label="Retina scan illustration">
+                <svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+                    <!-- Fundus background -->
+                    <circle cx="60" cy="60" r="52" fill="#D4956B" />
+                    <circle cx="60" cy="60" r="48" fill="#E8B88A" />
+                    <!-- Macula (central yellow area) -->
+                    <circle cx="66" cy="56" r="12" fill="#F4D03F" opacity="0.75" />
+                    <!-- Optic disc (left side) -->
+                    <ellipse cx="32" cy="52" rx="14" ry="16" fill="#E67E22" />
+                    <ellipse cx="32" cy="52" rx="8" ry="10" fill="#D35400" />
+                    <!-- Blood vessels – radiating pattern -->
+                    <path d="M32 52 Q42 62, 58 68" stroke="#A93226" stroke-width="2.2" fill="none" />
+                    <path d="M32 52 Q48 42, 74 36" stroke="#A93226" stroke-width="2" fill="none" />
+                    <path d="M32 52 Q22 62, 26 88" stroke="#A93226" stroke-width="2" fill="none" />
+                    <path d="M32 52 Q42 32, 62 18" stroke="#A93226" stroke-width="1.8" fill="none" />
+                    <path d="M32 52 Q16 46, 8 34" stroke="#A93226" stroke-width="1.4" fill="none" />
+                    <path d="M58 68 Q68 78, 78 82" stroke="#A93226" stroke-width="1.2" fill="none" />
+                    <path d="M74 36 Q84 30, 94 30" stroke="#A93226" stroke-width="1.2" fill="none" />
+                    <path d="M26 88 Q20 98, 28 104" stroke="#A93226" stroke-width="1.2" fill="none" />
+                    <path d="M62 18 Q66 8, 74 6" stroke="#A93226" stroke-width="1" fill="none" />
+                    <path d="M8 34 Q4 28, 8 20" stroke="#A93226" stroke-width="1" fill="none" />
+                    <!-- Subtle crosshair / clinical overlay -->
+                    <circle cx="60" cy="60" r="22" stroke="rgba(255,255,255,0.25)" stroke-width="0.8" fill="none" stroke-dasharray="3 4" />
+                    <line x1="60" y1="4" x2="60" y2="116" stroke="rgba(255,255,255,0.15)" stroke-width="0.6" />
+                    <line x1="4" y1="60" x2="116" y2="60" stroke="rgba(255,255,255,0.15)" stroke-width="0.6" />
+                    <!-- Small foveal reflection -->
+                    <circle cx="66" cy="56" r="3" fill="rgba(255,255,240,0.4)" />
+                </svg>
+            </div>
+
+            <!-- Badge -->
+            <span class="badge-top">AI-Powered Tele-Ophthalmology</span>
+
+            <!-- Headline -->
+            <h1>Early Detection.<br><span>Saves Sight.</span></h1>
+
+            <!-- Professional Matter -->
+            <p class="lead">
+                Join India's growing network of rural health workers using
+                explainable AI to screen for diabetic retinopathy at the
+                primary health centre level. No specialist required on-site.
+            </p>
+
+            <!-- Trust Signals -->
+            <div class="trust-stats">
+                <div class="stat-item">
+                    <span class="number"><i data-lucide="shield-check" style="width:22px;height:22px;"></i></span>
+                    <span class="label">Secure access</span>
+                </div>
+                <div class="stat-item">
+                    <span class="number"><i data-lucide="stethoscope" style="width:22px;height:22px;"></i></span>
+                    <span class="label">Clinical workflow</span>
+                </div>
+                <div class="stat-item">
+                    <span class="number"><i data-lucide="user-check" style="width:22px;height:22px;"></i></span>
+                    <span class="label">Human review</span>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- ==========================================================
+    RIGHT PANEL – Registration Form (No Gaps)
+    ========================================================== -->
+    <div class="right-panel">
+        <div class="right-inner">
+
+            <!-- Progress -->
+            <div class="registration-progress" aria-label="Registration progress">
+                <span class="step active"><span class="step-number">1</span>Account</span>
+            </div>
+
+            <!-- Header -->
+            <div class="form-header">
+                <h2>Register PHC Worker</h2>
+                <p>Create a new account or update your existing PHC worker details.</p>
+            </div>
+
+            <!-- Django Form -->
+            <form method="post" novalidate class="auth-form">
+                {% csrf_token %}
+
+                <!-- Non-field errors -->
+                {% if form.non_field_errors %}
+                <ul class="errorlist nonfield">
+                    {% for error in form.non_field_errors %}
+                    <li>{{ error }}</li>
+                    {% endfor %}
+                </ul>
+                {% endif %}
+
+                <!-- Form Fields – Zero Gaps -->
+                <div class="form-row">
+                    {% for field in form %}
+                        {% if field.name == 'first_name' %}
+                            <div class="form-section-label"><i data-lucide="user-round" style="width:14px;height:14px;"></i>Personal details</div>
+                        {% endif %}
+                        {% if field.name == 'phone_number' %}
+                            <div class="form-section-label"><i data-lucide="building-2" style="width:14px;height:14px;"></i>PHC access</div>
+                        {% endif %}
+                        <!-- Password fields get half width, others full width -->
+                        {% if field.name == 'password' or field.name == 'confirm_password' %}
+                        <div class="form-group">
+                        {% else %}
+                        <div class="form-group full-width">
+                        {% endif %}
+                            <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                            {{ field }}
+
+                            {% for error in field.errors %}
+                            <div class="invalid-feedback">{{ error }}</div>
+                            {% endfor %}
+
+                            {% if field.help_text %}
+                            <div class="help-text">{{ field.help_text|striptags }}</div>
+                            {% endif %}
+                        </div>
+                    {% endfor %}
+                </div>
+
+                <!-- Security note -->
+                <div class="security-note">
+                    <i data-lucide="lock-keyhole" style="width:16px;height:16px;"></i>
+                    <span>Your account is used for authenticated PHC screening workflows. Keep your password private.</span>
+                </div>
+
+                <!-- Submit -->
+                <button class="btn-auth" type="submit">
+                    <i data-lucide="rocket" style="width:18px;height:18px;"></i>
+                    Save PHC Worker Details
+                </button>
+            </form>
+
+            <!-- Footer -->
+            <div class="auth-footer">
+                Already registered? <a href="{% url 'login' %}">Log in</a>
+            </div>
+
+        </div>
+    </div>
+
+</div>
+
+<!-- =============================================================
+     LUCIDE ICONS INIT
+     ============================================================= -->
+<style>
+    .password-toggle-wrap {
+        position: relative;
+    }
+
+    .password-toggle-wrap input {
+        padding-right: 48px;
+    }
+
+    .password-toggle {
+        position: absolute;
+        right: 12px;
+        top: 50%;
+        transform: translateY(-50%);
+        border: none;
+        background: transparent;
+        color: #64748b;
+        padding: 0;
+        width: 28px;
+        height: 28px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        transition: all 0.2s ease;
+        cursor: pointer;
+    }
+
+    .password-toggle:hover {
+        background: rgba(148, 163, 184, 0.12);
+        color: #0f172a;
+    }
+
+    .password-toggle:focus {
+        outline: 2px solid rgba(59, 130, 246, 0.35);
+        outline-offset: 2px;
+    }
+</style>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        if (typeof lucide === 'undefined') {
+            const script = document.createElement('script');
+            script.src = 'https://unpkg.com/lucide@latest';
+            script.onload = function() {
+                if (typeof lucide !== 'undefined') {
+                    lucide.createIcons();
+                }
+            };
+            document.head.appendChild(script);
+        } else {
+            lucide.createIcons();
+        }
+
+        document.querySelectorAll('input[type="password"]').forEach(function(input) {
+            if (input.closest('.password-toggle-wrap')) return;
+
+            const wrapper = document.createElement('div');
+            wrapper.className = 'password-toggle-wrap';
+            input.parentNode.insertBefore(wrapper, input);
+            wrapper.appendChild(input);
+
+            const toggle = document.createElement('button');
+            toggle.type = 'button';
+            toggle.className = 'password-toggle';
+            toggle.setAttribute('aria-label', 'Show password');
+            toggle.innerHTML = '<i data-lucide="eye" style="width:18px;height:18px;"></i>';
+            wrapper.appendChild(toggle);
+
+            toggle.addEventListener('click', function() {
+                const isPassword = input.type === 'password';
+                input.type = isPassword ? 'text' : 'password';
+                toggle.setAttribute('aria-label', isPassword ? 'Hide password' : 'Show password');
+                toggle.innerHTML = isPassword
+                    ? '<i data-lucide="eye-off" style="width:18px;height:18px;"></i>'
+                    : '<i data-lucide="eye" style="width:18px;height:18px;"></i>';
+                if (typeof lucide !== 'undefined') {
+                    lucide.createIcons();
+                }
+            });
+        });
+
+        // Mark invalid fields
+        document.querySelectorAll('.auth-form .invalid-feedback').forEach(function(el) {
+            const group = el.closest('.form-group');
+            if (group) {
+                const input = group.querySelector('input, select, textarea');
+                if (input) {
+                    input.classList.add('is-invalid');
+                }
+            }
+        });
+    });
+</script>
+
+{% endblock %}
