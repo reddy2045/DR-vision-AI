@@ -2,8 +2,6 @@
 
 A Django-based Primary Health Centre (PHC) web application for automated diabetic retinopathy (DR) screening using a MATLAB ResNet-18 deep learning model.
 
-**Live Demo:** [DR Vision AI](https://frontend-seven-orcin-i6l4rfskqq.vercel.app/)
-
 ---
 
 ## Features
@@ -222,4 +220,6 @@ The API listens on `http://127.0.0.1:4000` and the bridge on `http://127.0.0.1:5
 Research prototype — for educational and evaluation purposes only.
 
 > The AI model output is not a medical diagnosis. All referable results must be reviewed by a qualified ophthalmologist.
+
+**Live Demo:** [DR Vision AI](https://frontend-seven-orcin-i6l4rfskqq.vercel.app/)
 
