@@ -1,10 +1,11 @@
 import logging
 import os
 from pathlib import Path
+from uuid import uuid4
 
 from django.conf import settings
 
-from .matlab_engine import configured_model_path, get_engine
+from .matlab_engine import configured_model_path, screen_fundus
 
 
 CLASS_NAMES = ('No_DR', 'Mild', 'Moderate', 'Severe', 'Proliferate_DR')
@@ -26,15 +27,9 @@ def predict_fundus(image_path):
     image_path = str(Path(image_path).resolve())
     gradcam_dir = Path(settings.MEDIA_ROOT) / 'gradcam'
     gradcam_dir.mkdir(parents=True, exist_ok=True)
-    gradcam_path = gradcam_dir / f'{Path(image_path).stem}_gradcam.png'
+    gradcam_path = gradcam_dir / f'{Path(image_path).stem}_{uuid4().hex}_gradcam.png'
 
-    engine = get_engine()
-    result = engine.screen_fundus(
-        str(configured_model_path()),
-        image_path,
-        str(gradcam_path),
-        nargout=6,
-    )
+    result = screen_fundus(configured_model_path(), image_path, gradcam_path)
     predicted_class, dr_level, confidence, referable, low_confidence, saved_gradcam = result
     dr_level = int(dr_level)
     confidence = float(confidence)

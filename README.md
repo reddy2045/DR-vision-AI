@@ -66,9 +66,26 @@ pip install -r requirements.txt
 
 ### 4. Install MATLAB Engine for Python
 
+MATLAB Engine is distributed with MATLAB and must be installed into this project's
+virtual environment. Use the Python executable from `venv` explicitly. Run this
+from an elevated PowerShell if MATLAB is installed under the protected `Program Files`
+directory:
+
 ```bash
-pip install "C:\Program Files\MATLAB\R2026a\extern\engines\python"
+venv\Scripts\python.exe -m pip install "C:\Program Files\MATLAB\R2026a\extern\engines\python"
+venv\Scripts\python.exe -c "import matlab.engine; print('MATLAB ENGINE OK')"
 ```
+
+If the direct install is denied permission, copy the `extern\engines\python`
+directory to a writable folder that preserves the MATLAB-relative `bin` and
+`extern\bin` directories, install from that copy, and ensure the installed
+`matlab\engine\_arch.txt` contains the real MATLAB R2026a paths. Do not leave
+temporary build paths in `_arch.txt`.
+
+The MATLAB installation must include `bin\matlab.exe`. The application starts the
+engine lazily on the first real screening request and reuses it for later requests.
+It reconnects once if the existing engine has stopped; it never substitutes a fake
+prediction.
 
 ### 5. Configure environment variables
 
@@ -82,7 +99,9 @@ Key variables to set:
 
 ```env
 DB_PASSWORD=your_mysql_password
+MATLAB_ROOT=C:\Program Files\MATLAB\R2026a
 MATLAB_MODEL_PATH=C:\path\to\trainedDRModel.mat
+MATLAB_SCRIPT_PATH=C:\htm\phc_screening\ai_engine\matlab
 DJANGO_SECRET_KEY=your-strong-secret-key
 ```
 
@@ -157,6 +176,26 @@ phc_screening/
 └── requirements.txt
 ```
 
+## Production REST Architecture
+
+The production API is now split into the requested layers:
+
+```text
+React.js -> Node.js + Express.js -> Python AI bridge -> MATLAB Engine for Python -> MATLAB R2026a -> trainedDRModel.mat
+```
+
+The Node service lives in `server/` and exposes JWT-protected REST endpoints for authentication, patients, screening uploads, results, referrals, and media. The Python bridge in `ai_engine/bridge_server.py` is a long-lived process so MATLAB Engine can be reused; it calls the existing MATLAB function and never fabricates a result. The model file is read-only and is never copied or modified.
+
+To run the API, install Node dependencies with `cd server; npm install`, copy `server/.env.example` to `server/.env`, execute `server/schema.sql` against MySQL, then start the bridge and API in separate terminals:
+
+```bash
+python -m ai_engine.bridge_server
+cd server
+npm start
+```
+
+The API listens on `http://127.0.0.1:4000` and the bridge on `http://127.0.0.1:5050`. Send `Authorization: Bearer <token>` on all patient and screening requests. `POST /api/create_screening` accepts multipart field `fundus_image`; its result contains the real MATLAB `predicted_class`, `dr_level`, `confidence`, and generated `gradcam_url`.
+
 ---
 
 ## Environment Variables Reference
@@ -181,3 +220,4 @@ phc_screening/
 Research prototype — for educational and evaluation purposes only.
 
 > The AI model output is not a medical diagnosis. All referable results must be reviewed by a qualified ophthalmologist.
+

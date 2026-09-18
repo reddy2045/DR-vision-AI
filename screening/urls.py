@@ -2,17 +2,12 @@ from django.urls import path
 from . import views
 
 urlpatterns = [
-    path('register/', views.register, name='register'),
-    path('login/', views.login_view, name='login'),
-    path('admin-login/', views.admin_login, name='admin_login'),
-    path('logout/', views.logout_view, name='logout'),
-    path('', views.dashboard, name='dashboard'),
-    path('admin-dashboard/', views.admin_dashboard, name='admin_dashboard'),
-    path('admin-dashboard/employees/add/', views.employee_create, name='employee_create'),
-    path('admin-dashboard/employees/<int:employee_id>/edit/', views.employee_edit, name='employee_edit'),
-    path('admin-dashboard/employees/<int:employee_id>/toggle-status/', views.employee_toggle_status, name='employee_toggle_status'),
     path('api/patients/', views.api_patients, name='api_patients'),
     path('api/screening/<str:patient_id>/', views.api_screening, name='api_screening'),
     path('api/create_screening/', views.api_create_screening, name='api_create_screening'),
     path('api/referral/<int:screening_id>/', views.api_generate_referral, name='api_referral'),
+    path('api/auth/register/', views.api_register, name='api_register'),
+    path('api/auth/login/', views.api_login, name='api_login'),
+    path('api/admin/employees/', views.api_admin_employees, name='api_admin_employees'),
+    path('api/admin/employees/<int:employee_id>/', views.api_admin_employees, name='api_admin_employee_detail'),
 ]

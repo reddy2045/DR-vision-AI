@@ -1,9 +1,15 @@
 import os
 from pathlib import Path
 
+from dotenv import load_dotenv
+
 BASE_DIR = Path(__file__).resolve().parent.parent
+load_dotenv(BASE_DIR / '.env')
 
 SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'django-insecure-change-me-in-production')
+
+JWT_SECRET = os.environ.get('JWT_SECRET', SECRET_KEY)
+JWT_EXPIRES_HOURS = int(os.environ.get('JWT_EXPIRES_HOURS', '8'))
 
 DEBUG = True
 
@@ -16,6 +22,7 @@ ALLOWED_HOSTS = [
 ]
 
 INSTALLED_APPS = [
+    'corsheaders',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -27,12 +34,22 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+]
+
+CORS_ALLOWED_ORIGINS = [
+    origin.strip()
+    for origin in os.environ.get(
+        'CORS_ALLOWED_ORIGINS',
+        'http://127.0.0.1:5173,http://localhost:5173',
+    ).split(',')
+    if origin.strip()
 ]
 
 ROOT_URLCONF = 'phc_screening.urls'
@@ -55,17 +72,26 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'phc_screening.wsgi.application'
 
-# MySQL Database
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.mysql',
-        'NAME': os.environ.get('DB_NAME', 'phc_db'),
-        'USER': os.environ.get('DB_USER', 'root'),
-        'PASSWORD': os.environ.get('DB_PASSWORD', ''),
-        'HOST': os.environ.get('DB_HOST', 'localhost'),
-        'PORT': os.environ.get('DB_PORT', '3306'),
+# MySQL is the normal deployment database. Set PREVIEW_USE_SQLITE=1 for a
+# local preview that uses the checked-in development database instead.
+if os.environ.get('PREVIEW_USE_SQLITE', '').lower() in {'1', 'true', 'yes'}:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'preview.sqlite3',
+        }
     }
-}
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.mysql',
+            'NAME': os.environ.get('DB_NAME', 'phc_db'),
+            'USER': os.environ.get('DB_USER', 'root'),
+            'PASSWORD': os.environ.get('DB_PASSWORD', ''),
+            'HOST': os.environ.get('DB_HOST', 'localhost'),
+            'PORT': os.environ.get('DB_PORT', '3306'),
+        }
+    }
 
 AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
@@ -84,7 +110,9 @@ STATICFILES_DIRS = [BASE_DIR / 'screening' / 'static']
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
+MATLAB_ROOT = os.environ.get('MATLAB_ROOT', r'C:\Program Files\MATLAB\R2026a')
 MATLAB_MODEL_PATH = os.environ.get('MATLAB_MODEL_PATH', r'C:\SIH HACKThon\DR_Project\trainedDRModel.mat')
+MATLAB_SCRIPT_PATH = os.environ.get('MATLAB_SCRIPT_PATH', str(BASE_DIR / 'ai_engine' / 'matlab'))
 MAX_UPLOAD_SIZE = 10 * 1024 * 1024
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'

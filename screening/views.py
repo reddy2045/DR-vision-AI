@@ -2,38 +2,73 @@ import json
 import logging
 import os
 import tempfile
+from datetime import datetime, timedelta, timezone
 from decimal import Decimal
+from functools import wraps
 from pathlib import Path
+from uuid import uuid4
+import jwt
 from django.conf import settings
 from django.db import transaction
-from django.shortcuts import get_object_or_404, render, redirect
-from django.contrib.auth import login, authenticate, logout
+from django.shortcuts import get_object_or_404
 from django.contrib.auth.models import User
-from django.contrib.auth.decorators import login_required
-from django.contrib.auth.decorators import user_passes_test
-from django.contrib import messages
 from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
 from django.db.models import Q
 from .models import Patient, Screening, PHCWorker
 from .models import Employee
-from .forms import EmployeeForm, RegistrationForm, LoginForm
+from ai_engine.matlab_engine import MATLABConfigurationError, MATLABEngineUnavailable
 from ai_engine.predictor import predict_fundus
 from ai_engine.quality import MAX_IMAGE_BYTES, check_image_quality
 
 logger = logging.getLogger(__name__)
 
-# ----- Dashboard and API views -----
 
-@login_required
-def dashboard(request):
-    return render(request, 'dashboard.html')
+def _jwt_payload(user):
+    return {
+        'sub': str(user.id),
+        'employee_id': getattr(getattr(user, 'employee_record', None), 'employee_id', user.username),
+        'role': 'admin' if user.is_staff else 'PHC Worker',
+        'exp': datetime.now(timezone.utc) + timedelta(hours=settings.JWT_EXPIRES_HOURS),
+    }
 
-@login_required
+
+def api_jwt_required(view):
+    @wraps(view)
+    def wrapped(request, *args, **kwargs):
+        if request.user.is_authenticated:
+            return view(request, *args, **kwargs)
+        header = request.headers.get('Authorization', '')
+        if not header.startswith('Bearer '):
+            return JsonResponse({'error': 'Bearer token is required.'}, status=401)
+        try:
+            claims = jwt.decode(header[7:], settings.JWT_SECRET, algorithms=['HS256'])
+            user = User.objects.get(id=int(claims['sub']), is_active=True)
+        except (jwt.InvalidTokenError, User.DoesNotExist, KeyError):
+            return JsonResponse({'error': 'Invalid or expired token.'}, status=401)
+        request.user = user
+        return view(request, *args, **kwargs)
+    return wrapped
+
+
+def _api_user(user):
+    employee = getattr(user, 'employee_record', None)
+    return {
+        'id': user.id,
+        'employee_id': employee.employee_id if employee else user.username,
+        'full_name': user.get_full_name() or user.username,
+        'email': user.email,
+        'role': 'admin' if user.is_staff else 'PHC Worker',
+    }
+
+# ----- API views -----
+
+@api_jwt_required
 def api_patients(request):
     patients = Patient.objects.all().values('id', 'first_name', 'last_name', 'patient_id', 'age', 'gender')
     return JsonResponse(list(patients), safe=False)
 
-@login_required
+@api_jwt_required
 def api_screening(request, patient_id):
     try:
         patient = Patient.objects.get(patient_id=patient_id)
@@ -72,7 +107,8 @@ def api_screening(request, patient_id):
     except Patient.DoesNotExist:
         return JsonResponse({'error': 'Patient not found'}, status=404)
 
-@login_required
+@csrf_exempt
+@api_jwt_required
 def api_create_screening(request):
     if request.method != 'POST':
         return JsonResponse({'error': 'Method not allowed'}, status=405)
@@ -134,6 +170,7 @@ def api_create_screening(request):
                 diabetes_duration=Decimal(str(data.get('diabetes_duration', '0'))),
                 hba1c=float(data.get('hba1c', 0.0))
             )
+            fundus_image.name = f'{uuid4().hex}{suffix}'
             screening = Screening.objects.create(
                 patient=patient,
                 eye_side=data.get('eye_side', 'OD'),
@@ -189,14 +226,17 @@ def api_create_screening(request):
         })
 
     except Exception as e:
+        logger.exception('Screening failed')
         if screening and screening.fundus_image:
             screening.fundus_image.delete(save=False)
-        return JsonResponse({'error': str(e)}, status=400)
+        public_message = getattr(e, 'public_message', str(e))
+        status = 503 if isinstance(e, (MATLABConfigurationError, MATLABEngineUnavailable)) else 400
+        return JsonResponse({'error': public_message}, status=status)
     finally:
         if temporary_path and os.path.exists(temporary_path):
             os.unlink(temporary_path)
 
-@login_required
+@api_jwt_required
 def api_generate_referral(request, screening_id):
     try:
         screening = Screening.objects.get(id=screening_id)
@@ -227,165 +267,154 @@ def api_generate_referral(request, screening_id):
     except Screening.DoesNotExist:
         return JsonResponse({'error': 'Screening not found'}, status=404)
 
-# ----- Authentication views -----
 
-def register(request):
-    if request.method == 'POST':
-        form = RegistrationForm(request.POST)
-        if form.is_valid():
-            phc_id = form.cleaned_data['phc_id']
-            phone_number = form.cleaned_data['phone_number']
-            employee = Employee.objects.get(employee_id=phc_id)
-
-            with transaction.atomic():
-                user = User.objects.create_user(
-                    username=phc_id,
-                    first_name=form.cleaned_data['first_name'],
-                    last_name=form.cleaned_data.get('last_name', ''),
-                    email=form.cleaned_data['email'],
-                    password=form.cleaned_data['password']
-                )
-                employee.user = user
-                employee.phone = phone_number
-                employee.email = form.cleaned_data['email']
-                employee.full_name = f"{user.first_name} {user.last_name}".strip()
-                employee.save(update_fields=['user', 'phone', 'email', 'full_name', 'updated_at'])
-                PHCWorker.objects.create(
-                    user=user,
-                    phc_id=phc_id,
-                    phone_number=phone_number
-                )
-                success_message = "Registration successful. Please log in."
-            messages.success(request, success_message)
-            return redirect('login')
-    else:
-        form = RegistrationForm()
-    return render(request, 'registration/register.html', {'form': form})
-
-def login_view(request):
-    if request.method == 'POST':
-        form = LoginForm(request, data=request.POST)
-        if form.is_valid():
-            username = form.cleaned_data.get('username')
-            password = form.cleaned_data.get('password')
-            user = authenticate(request, username=username, password=password)
-            if user is not None:
-                login(request, user)
-                return redirect('admin_dashboard' if user.is_staff else 'dashboard')
-            else:
-                messages.error(request, "Invalid credentials.")
-        else:
-            username = request.POST.get('username', '').strip()
-            inactive_user = User.objects.filter(username=username, is_active=False).first()
-            if inactive_user is None:
-                inactive_user = User.objects.filter(email__iexact=username, is_active=False).first()
-            if inactive_user is None:
-                worker = PHCWorker.objects.filter(phc_id=username).select_related('user').first()
-                if worker and not worker.user.is_active:
-                    inactive_user = worker.user
-            if inactive_user is None:
-                worker = PHCWorker.objects.filter(phone_number=username).select_related('user').first()
-                if worker and not worker.user.is_active:
-                    inactive_user = worker.user
-            messages.error(request, 'Account is inactive.' if inactive_user else 'Invalid credentials.')
-    else:
-        form = LoginForm()
-    return render(request, 'registration/login.html', {'form': form})
-
-def logout_view(request):
-    logout(request)
-    return redirect('login')
+@csrf_exempt
+def api_login(request):
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+    try:
+        data = json.loads(request.body or '{}')
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'Invalid JSON body.'}, status=400)
+    login_value = str(data.get('login', '')).strip()
+    password = str(data.get('password', ''))
+    user = User.objects.filter(username=login_value).first() or User.objects.filter(email__iexact=login_value).first()
+    if user is None:
+        employee = Employee.objects.filter(employee_id=login_value).select_related('user').first()
+        user = employee.user if employee else None
+    if user is None or not user.is_active or not user.check_password(password):
+        return JsonResponse({'error': 'Invalid credentials.'}, status=401)
+    safe_user = _api_user(user)
+    return JsonResponse({'user': safe_user, 'token': jwt.encode(_jwt_payload(user), settings.JWT_SECRET, algorithm='HS256')})
 
 
-def staff_required(view):
-    return user_passes_test(
-        lambda user: user.is_authenticated and user.is_staff,
-        login_url='admin_login',
-    )(view)
+@csrf_exempt
+def api_register(request):
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+    try:
+        data = json.loads(request.body or '{}')
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'Invalid JSON body.'}, status=400)
+    employee_id = str(data.get('employee_id', '')).strip()
+    full_name = str(data.get('full_name', '')).strip()
+    email = str(data.get('email', '')).strip()
+    password = str(data.get('password', ''))
+    if not employee_id or not full_name or not email or len(password) < 8:
+        return JsonResponse({'error': 'employee_id, full_name, email and an 8-character password are required.'}, status=400)
+
+    employee = Employee.objects.filter(employee_id__iexact=employee_id).first()
+    if employee is None:
+        return JsonResponse({'error': 'Invalid Employee ID. Please contact your administrator.'}, status=400)
+    if not employee.is_active:
+        return JsonResponse({'error': 'This Employee ID is inactive. Please contact your administrator.'}, status=403)
+    if employee.user_id is not None:
+        return JsonResponse({'error': 'This Employee ID is already registered.'}, status=409)
+    if User.objects.filter(username=employee.employee_id).exists() or User.objects.filter(email__iexact=email).exists():
+        return JsonResponse({'error': 'An account with this employee ID or email already exists.'}, status=409)
+    first_name, _, last_name = full_name.partition(' ')
+    with transaction.atomic():
+        user = User.objects.create_user(username=employee.employee_id, first_name=first_name, last_name=last_name, email=email, password=password)
+        employee.user = user
+        employee.full_name = full_name
+        employee.email = email
+        employee.save(update_fields=['user', 'full_name', 'email', 'updated_at'])
+        PHCWorker.objects.create(user=user, phc_id=employee.employee_id, phone_number=employee.phone or None)
+    safe_user = _api_user(user)
+    return JsonResponse({'user': safe_user, 'token': jwt.encode(_jwt_payload(user), settings.JWT_SECRET, algorithm='HS256')}, status=201)
 
 
-def admin_login(request):
-    if request.user.is_authenticated and request.user.is_staff:
-        return redirect('admin_dashboard')
-    form = LoginForm(request, data=request.POST or None)
-    if request.method == 'POST' and form.is_valid():
-        user = authenticate(request, username=form.cleaned_data['username'], password=form.cleaned_data['password'])
-        if user is not None and user.is_staff:
-            login(request, user)
-            return redirect('admin_dashboard')
-        messages.error(request, 'Administrator access is required.')
-    return render(request, 'registration/admin_login.html', {'form': form})
+def api_staff_required(view):
+    @wraps(view)
+    @api_jwt_required
+    def wrapped(request, *args, **kwargs):
+        if not request.user.is_staff:
+            return JsonResponse({'error': 'Administrator access is required.'}, status=403)
+        return view(request, *args, **kwargs)
+    return wrapped
 
 
-@staff_required
-def admin_dashboard(request):
-    employees = Employee.objects.select_related('user').order_by('employee_id')
-    query = request.GET.get('q', '').strip()
-    status = request.GET.get('status', '')
-    registration = request.GET.get('registration', '')
-    if query:
-        employees = employees.filter(
-            Q(employee_id__icontains=query) |
-            Q(full_name__icontains=query) |
-            Q(phone__icontains=query) |
-            Q(email__icontains=query)
-        )
-    if status == 'active':
-        employees = employees.filter(is_active=True)
-    elif status == 'inactive':
-        employees = employees.filter(is_active=False)
-    if registration == 'registered':
-        employees = employees.filter(user__isnull=False)
-    elif registration == 'pending':
-        employees = employees.filter(user__isnull=True)
-    all_employees = Employee.objects.all()
-    context = {
-        'employees': employees,
-        'total_employees': all_employees.count(),
-        'active_employees': all_employees.filter(is_active=True).count(),
-        'inactive_employees': all_employees.filter(is_active=False).count(),
-        'registered_employees': all_employees.filter(user__isnull=False).count(),
-        'pending_employees': all_employees.filter(user__isnull=True).count(),
-        'query': query,
-        'status': status,
-        'registration': registration,
+def _employee_payload(employee):
+    return {
+        'id': employee.id,
+        'employee_id': employee.employee_id,
+        'full_name': employee.full_name,
+        'role': employee.role,
+        'department': employee.department,
+        'phone': employee.phone,
+        'email': employee.email,
+        'is_active': employee.is_active,
+        'is_registered': employee.is_registered,
+        'created_at': employee.created_at.isoformat(),
     }
-    return render(request, 'admin_dashboard.html', context)
 
 
-@staff_required
-def employee_create(request):
-    form = EmployeeForm(request.POST or None)
-    if request.method == 'POST' and form.is_valid():
-        form.save()
-        messages.success(request, 'Employee ID created successfully.')
-        return redirect('admin_dashboard')
-    return render(request, 'employee_form.html', {'form': form, 'title': 'Add Employee'})
+@csrf_exempt
+@api_staff_required
+def api_admin_employees(request, employee_id=None):
+    if request.method == 'GET':
+        query = request.GET.get('q', '').strip()
+        status = request.GET.get('status', '')
+        employees = Employee.objects.select_related('user').order_by('employee_id')
+        if query:
+            employees = employees.filter(
+                Q(employee_id__icontains=query) |
+                Q(full_name__icontains=query) |
+                Q(phone__icontains=query) |
+                Q(email__icontains=query)
+            )
+        if status == 'active':
+            employees = employees.filter(is_active=True)
+        elif status == 'inactive':
+            employees = employees.filter(is_active=False)
+        if status == 'registered':
+            employees = employees.filter(user__isnull=False)
+        elif status == 'pending':
+            employees = employees.filter(user__isnull=True)
+        all_employees = Employee.objects.all()
+        return JsonResponse({
+            'employees': [_employee_payload(employee) for employee in employees],
+            'stats': {
+                'total': all_employees.count(),
+                'active': all_employees.filter(is_active=True).count(),
+                'inactive': all_employees.filter(is_active=False).count(),
+                'registered': all_employees.filter(user__isnull=False).count(),
+                'pending': all_employees.filter(user__isnull=True).count(),
+            },
+        })
 
+    if request.method not in ('POST', 'PUT', 'PATCH'):
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+    try:
+        data = json.loads(request.body or '{}')
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'Invalid JSON body.'}, status=400)
 
-@staff_required
-def employee_edit(request, employee_id):
-    employee = get_object_or_404(Employee, pk=employee_id)
-    form = EmployeeForm(request.POST or None, instance=employee)
-    if request.method == 'POST' and form.is_valid():
-        employee = form.save()
+    employee = get_object_or_404(Employee, pk=employee_id) if employee_id else None
+    values = {
+        'employee_id': str(data.get('employee_id', employee.employee_id if employee else '')).strip(),
+        'full_name': str(data.get('full_name', employee.full_name if employee else '')).strip(),
+        'role': str(data.get('role', employee.role if employee else 'PHC Worker')).strip(),
+        'department': str(data.get('department', employee.department if employee else 'PHC')).strip(),
+        'phone': str(data.get('phone', employee.phone if employee else '')).strip(),
+        'email': str(data.get('email', employee.email if employee else '')).strip(),
+        'is_active': data.get('is_active', employee.is_active if employee else True),
+    }
+    if not values['employee_id'] or not values['full_name']:
+        return JsonResponse({'error': 'Employee ID and full name are required.'}, status=400)
+    duplicate = Employee.objects.filter(employee_id=values['employee_id']).exclude(pk=employee.pk if employee else None).exists()
+    if duplicate:
+        return JsonResponse({'error': 'That employee ID already exists.'}, status=409)
+    if employee is None:
+        employee = Employee.objects.create(**values)
+        status_code = 201
+    else:
+        for field, value in values.items():
+            setattr(employee, field, value)
+        employee.save()
         if employee.user_id:
             employee.user.is_active = employee.is_active
             employee.user.save(update_fields=['is_active'])
-        messages.success(request, 'Employee details updated.')
-        return redirect('admin_dashboard')
-    return render(request, 'employee_form.html', {'form': form, 'title': 'Edit Employee', 'employee': employee})
+        status_code = 200
+    return JsonResponse({'employee': _employee_payload(employee)}, status=status_code)
 
-
-@staff_required
-def employee_toggle_status(request, employee_id):
-    employee = get_object_or_404(Employee, pk=employee_id)
-    if request.method == 'POST':
-        employee.is_active = not employee.is_active
-        employee.save(update_fields=['is_active', 'updated_at'])
-        if employee.user:
-            employee.user.is_active = employee.is_active
-            employee.user.save(update_fields=['is_active'])
-        status_str = "activated" if employee.is_active else "deactivated"
-        messages.success(request, f"Employee {employee.employee_id} has been {status_str}.")
-    return redirect('admin_dashboard')

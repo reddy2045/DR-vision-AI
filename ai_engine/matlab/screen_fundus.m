@@ -14,7 +14,10 @@ patientInput = imresize(patientImage, inputSize(1:2));
 patientInput = im2single(patientInput);
 patientInput = dlarray(patientInput, 'SSC');
 scores = predict(net, patientInput);
-probabilities = softmax(extractdata(scores));
+% The trained network already ends with a SoftmaxLayer.
+probabilities = extractdata(scores);
+probabilities = probabilities(:);
+probabilities = probabilities / sum(probabilities);
 [confidence, idx] = max(probabilities);
 
 classNames = ["No_DR", "Mild", "Moderate", "Severe", "Proliferate_DR"];

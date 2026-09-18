@@ -1,0 +1,1 @@
+export default function PageHeader({ eyebrow, title, description, action }) { const overview = eyebrow === 'Overview'; return <div className={`page-header ${overview ? 'overview-header' : ''}`}><div><span className="eyebrow">{eyebrow}</span><h2 className={overview ? 'overview-title' : ''}>{title}</h2>{description && <p>{description}</p>}</div>{action}</div>; }
